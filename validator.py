@@ -16,6 +16,7 @@
 import numpy as np
 import matplotlib.pyplot as pl
 import pandas as pd
+from scipy.integrate import odeint
 get_ipython().magic('matplotlib inline')
 
 
@@ -27,49 +28,98 @@ get_ipython().magic('matplotlib inline')
 filename = "data/exp1420.tsv"
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
 init = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
+t_final = exp.Time.values[-1]
+t_prefinal = exp.Time.values[-2]
 
 
 # ## We propose the following mechanism
 # $\require{mhchem}$
-# $$\ce{A + C->[k_1] B + C}$$
+# $$\ce{\alpha_1 A + \gamma C->[k_1] \beta B + \gamma C}$$
 # 
-# $$\ce{A ->[k_2] U}$$
+# $$\ce{\alpha_2 A ->[k_2] \upsilon U}$$
 # 
-# $$\ce{B <=>[{k_3}][{k_{-3}}] D}$$
+# $$\ce{\beta B <=>[{k_3}][{k_{-3}}] \delta D}$$
 # 
 # 
 # A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.
 # 
+# The following rate laws will be tested.
+# 
+# $$-r_A = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_2 C_A^{\alpha_2}$$
+# 
+# $$r_U = k_2 C_A^{\alpha_2}$$
+# 
+# $$r_B = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_{-3} C_D^{\delta} - k_3 C_B^{\beta}$$
+# 
+# $$r_D = k_3 C_B^\beta - k_{-3} C_D^\delta$$
+# 
+# Applying the pseudo steady-state hypothesis on the intermediate species B and adding the last two equations, we obtain the following relation.
+# 
+# $$r_D = k_1 C_A^{\alpha_1} C_C^{\gamma}.$$
+# 
+# Therefore,
+# 
+# $$-r_A = r_D + r_U$$
+# 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[4]:
+# In[3]:
 
 
-def rate_law(cA0, cC0, T, time):
+def concentrations(cA0, cC0, T, time, params):
     """"
-    This function is the proposed rate law.
+    This function calculates the concentrations of the reacting species using a proposed rate law
     cA (mol/L) is the initial concentration of reactant A
     cC (mol/L) is the initial catalyst concentration
     T (K) is the temperature
     time (s) is the elapsed reaction time
     Return values:
-    cA (mol/L) concentration of A at the given reaction time
-    cD (mol/L) concentration of the desired product D at the given reaction time
-    cU (mol/L) concentration of the undesired product U at the given reaction time
+    time (s) array of times at which concentrations were calculated
+    cA (mol/L) array of concentrations of A during the time interval
+    cD (mol/L) array of concentrations of the desired product D during the time interval
+    cU (mol/L) array of concentrations of the undesired product U during the time interval
     """
-    # rate "constants"
-    k1 = 1.          # units of k1
-    k2 = 3.2         # units of k2
-    k3 = 0.25 * T**2 # units of k3
-    k_3 = 0.5        # units of k_{-3}
+    
+    try:
+        alpha1, alpha2, gamma, k1, k2 = params
+    except:
+        print("Params should contain at least 5 parameters!")
+        return -1, -1, -1, -1,
+    else:
+        def dudt(cA):
+            return k2 * cA**alpha2
+
+        def dddt(cA):
+            return k1 * cA**alpha1 * cC0**gamma
         
-    cA = cA0 * time * k1
-    cD = cA0 * time * 2. * k2
-    cU = cA0 * time * 0.5 * k2 / k3
-    return cA, cD, cU
+        def rates(parms, time):
+            """
+            Returns the RHS of the system of ODEs
+            """
+            C_A, C_D, C_U = parms
+            rateD = dddt(C_A)
+            rateU = dudt(C_A)
+            rateA = -1. * rateD - rateU
+            return (rateA, rateD, rateU)
+        
+        times = np.linspace(0, time, 100)
+        
+        result = odeint(rates, (cA0, 0., 0.), times)
+        
+        cA = result[:,0]
+        cD = result[:,1]
+        cU = result[:,2]
+        
+    return times, cA, cD, cU
 
 
-# In[5]:
+# In[7]:
+
+
+times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal, (2, 2, 1, 1, 1))
+
+
+# In[8]:
 
 
 pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
@@ -77,11 +127,10 @@ pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
        exp.Time.values[:-1], exp.U.values[:-1], 'r.')
 
 
-# In[6]:
+# In[9]:
 
 
-A, D, U = rate_law(5., 0.2, 298, exp.Time.values)
-pl.plot(exp.Time.values[:-1], A[:-1], 'b.',
-       exp.Time.values[:-1], D[:-1], 'g.',
-       exp.Time.values[:-1], U[:-1], 'r.')
+pl.plot(times, A, 'b.',
+       times, D, 'g.',
+       times, U, 'r.')
 

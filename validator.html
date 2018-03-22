@@ -11792,6 +11792,7 @@ We can control the starting concentration of A, the concentration of C, and the 
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">pl</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="k">import</span> <span class="n">odeint</span>
 <span class="o">%</span><span class="k">matplotlib</span> inline
 </pre></div>
 
@@ -11816,6 +11817,8 @@ We can control the starting concentration of A, the concentration of C, and the 
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;data/exp1420.tsv&quot;</span>
 <span class="n">exp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">|[ ]{1,}&quot;</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="s1">&#39;U&#39;</span><span class="p">])</span>
 <span class="n">init</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">|[ ]{1,}&quot;</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="s1">&#39;U&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span><span class="p">],</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">usecols</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">t_final</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">t_prefinal</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
 </pre></div>
 
 </div>
@@ -11828,41 +11831,73 @@ We can control the starting concentration of A, the concentration of C, and the 
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h2 id="We-propose-the-following-mechanism">We propose the following mechanism<a class="anchor-link" href="#We-propose-the-following-mechanism">&#182;</a></h2><p>$\require{mhchem}$
-$$\ce{A + C-&gt;[k_1] B + C}$$</p>
-<p>$$\ce{A -&gt;[k_2] U}$$</p>
-<p>$$\ce{B &lt;=&gt;[{k_3}][{k_{-3}}] D}$$</p>
+$$\ce{\alpha_1 A + \gamma C-&gt;[k_1] \beta B + \gamma C}$$</p>
+<p>$$\ce{\alpha_2 A -&gt;[k_2] \upsilon U}$$</p>
+<p>$$\ce{\beta B &lt;=&gt;[{k_3}][{k_{-3}}] \delta D}$$</p>
 <p>A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.</p>
+<p>The following rate laws will be tested.</p>
+<p>$$-r_A = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_2 C_A^{\alpha_2}$$</p>
+<p>$$r_U = k_2 C_A^{\alpha_2}$$</p>
+<p>$$r_B = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_{-3} C_D^{\delta} - k_3 C_B^{\beta}$$</p>
+<p>$$r_D = k_3 C_B^\beta - k_{-3} C_D^\delta$$</p>
+<p>Applying the pseudo steady-state hypothesis on the intermediate species B and adding the last two equations, we obtain the following relation.</p>
+<p>$$r_D = k_1 C_A^{\alpha_1} C_C^{\gamma}.$$</p>
+<p>Therefore,</p>
+<p>$$-r_A = r_D + r_U$$</p>
 <h2 id="Use-the-cell-below-to-enter-a-rate-law.-Define-all-necessary-constants">Use the cell below to enter a rate law. Define all necessary constants<a class="anchor-link" href="#Use-the-cell-below-to-enter-a-rate-law.-Define-all-necessary-constants">&#182;</a></h2>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">rate_law</span><span class="p">(</span><span class="n">cA0</span><span class="p">,</span> <span class="n">cC0</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">concentrations</span><span class="p">(</span><span class="n">cA0</span><span class="p">,</span> <span class="n">cC0</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;&quot;</span>
-<span class="sd">    This function is the proposed rate law.</span>
+<span class="sd">    This function calculates the concentrations of the reacting species using a proposed rate law</span>
 <span class="sd">    cA (mol/L) is the initial concentration of reactant A</span>
 <span class="sd">    cC (mol/L) is the initial catalyst concentration</span>
 <span class="sd">    T (K) is the temperature</span>
 <span class="sd">    time (s) is the elapsed reaction time</span>
 <span class="sd">    Return values:</span>
-<span class="sd">    cA (mol/L) concentration of A at the given reaction time</span>
-<span class="sd">    cD (mol/L) concentration of the desired product D at the given reaction time</span>
-<span class="sd">    cU (mol/L) concentration of the undesired product U at the given reaction time</span>
+<span class="sd">    time (s) array of times at which concentrations were calculated</span>
+<span class="sd">    cA (mol/L) array of concentrations of A during the time interval</span>
+<span class="sd">    cD (mol/L) array of concentrations of the desired product D during the time interval</span>
+<span class="sd">    cU (mol/L) array of concentrations of the undesired product U during the time interval</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># rate &quot;constants&quot;</span>
-    <span class="n">k1</span> <span class="o">=</span> <span class="mf">1.</span>          <span class="c1"># units of k1</span>
-    <span class="n">k2</span> <span class="o">=</span> <span class="mf">3.2</span>         <span class="c1"># units of k2</span>
-    <span class="n">k3</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">T</span><span class="o">**</span><span class="mi">2</span> <span class="c1"># units of k3</span>
-    <span class="n">k_3</span> <span class="o">=</span> <span class="mf">0.5</span>        <span class="c1"># units of k_{-3}</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">alpha1</span><span class="p">,</span> <span class="n">alpha2</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span> <span class="o">=</span> <span class="n">params</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Params should contain at least 5 parameters!&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">dudt</span><span class="p">(</span><span class="n">cA</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">cA</span><span class="o">**</span><span class="n">alpha2</span>
+
+        <span class="k">def</span> <span class="nf">dddt</span><span class="p">(</span><span class="n">cA</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">k1</span> <span class="o">*</span> <span class="n">cA</span><span class="o">**</span><span class="n">alpha1</span> <span class="o">*</span> <span class="n">cC0</span><span class="o">**</span><span class="n">gamma</span>
         
-    <span class="n">cA</span> <span class="o">=</span> <span class="n">cA0</span> <span class="o">*</span> <span class="n">time</span> <span class="o">*</span> <span class="n">k1</span>
-    <span class="n">cD</span> <span class="o">=</span> <span class="n">cA0</span> <span class="o">*</span> <span class="n">time</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">k2</span>
-    <span class="n">cU</span> <span class="o">=</span> <span class="n">cA0</span> <span class="o">*</span> <span class="n">time</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">k2</span> <span class="o">/</span> <span class="n">k3</span>
-    <span class="k">return</span> <span class="n">cA</span><span class="p">,</span> <span class="n">cD</span><span class="p">,</span> <span class="n">cU</span>
+        <span class="k">def</span> <span class="nf">rates</span><span class="p">(</span><span class="n">parms</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Returns the RHS of the system of ODEs</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">C_A</span><span class="p">,</span> <span class="n">C_D</span><span class="p">,</span> <span class="n">C_U</span> <span class="o">=</span> <span class="n">parms</span>
+            <span class="n">rateD</span> <span class="o">=</span> <span class="n">dddt</span><span class="p">(</span><span class="n">C_A</span><span class="p">)</span>
+            <span class="n">rateU</span> <span class="o">=</span> <span class="n">dudt</span><span class="p">(</span><span class="n">C_A</span><span class="p">)</span>
+            <span class="n">rateA</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.</span> <span class="o">*</span> <span class="n">rateD</span> <span class="o">-</span> <span class="n">rateU</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">rateA</span><span class="p">,</span> <span class="n">rateD</span><span class="p">,</span> <span class="n">rateU</span><span class="p">)</span>
+        
+        <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        
+        <span class="n">result</span> <span class="o">=</span> <span class="n">odeint</span><span class="p">(</span><span class="n">rates</span><span class="p">,</span> <span class="p">(</span><span class="n">cA0</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">times</span><span class="p">)</span>
+        
+        <span class="n">cA</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">cD</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">cU</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span>
+        
+    <span class="k">return</span> <span class="n">times</span><span class="p">,</span> <span class="n">cA</span><span class="p">,</span> <span class="n">cD</span><span class="p">,</span> <span class="n">cU</span>
 </pre></div>
 
 </div>
@@ -11872,7 +11907,20 @@ $$\ce{A + C-&gt;[k_1] B + C}$$</p>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">times</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">concentrations</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">init</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="n">init</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">t_prefinal</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">exp</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;b.&#39;</span><span class="p">,</span>
@@ -11890,15 +11938,15 @@ $$\ce{A + C-&gt;[k_1] B + C}$$</p>
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[5]:</div>
+<div class="prompt output_prompt">Out[8]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7f8971376a58&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8971376be0&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f89713865c0&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f2023757c50&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f2023757dd8&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f20236e5780&gt;]</pre>
 </div>
 
 </div>
@@ -12064,13 +12112,12 @@ AABJRU5ErkJggg==
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">A</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">rate_law</span><span class="p">(</span><span class="mf">5.</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">298</span><span class="p">,</span> <span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
-<span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">A</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;b.&#39;</span><span class="p">,</span>
-       <span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">D</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;g.&#39;</span><span class="p">,</span>
-       <span class="n">exp</span><span class="o">.</span><span class="n">Time</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">U</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;r.&#39;</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="s1">&#39;b.&#39;</span><span class="p">,</span>
+       <span class="n">times</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="s1">&#39;g.&#39;</span><span class="p">,</span>
+       <span class="n">times</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="s1">&#39;r.&#39;</span><span class="p">)</span>
 </pre></div>
 
 </div>
@@ -12083,15 +12130,15 @@ AABJRU5ErkJggg==
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[6]:</div>
+<div class="prompt output_prompt">Out[9]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7f8971285198&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8971285320&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8971285c88&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f202369e0b8&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f202369e240&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f202369eba8&gt;]</pre>
 </div>
 
 </div>
@@ -12104,113 +12151,178 @@ AABJRU5ErkJggg==
 
 
 <div class="output_png output_subarea ">
-<img src="data:image/png;base64,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
+<img src="data:image/png;base64,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
 "
 >
 </div>
