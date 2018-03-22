@@ -25,7 +25,7 @@ get_ipython().magic('matplotlib inline')
 # In[2]:
 
 
-filename = "data/exp1420.tsv"
+filename = "data/exp1426.tsv"
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
 init = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
 t_final = exp.Time.values[-1]
@@ -113,13 +113,36 @@ def concentrations(cA0, cC0, T, time, params):
     return times, cA, cD, cU
 
 
-# In[7]:
+# ## Integrate
+# Use the cell below to carry out the integration
+
+# In[10]:
 
 
-times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal, (2, 2, 1, 1, 1))
+alpha1 = 2.
+alpha2 = 2.
+gamma = 1.
+k1 = 1.
+k2 = 0.01
+times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal,
+                                (alpha1, alpha2, gamma, k1, k2))
 
 
-# In[8]:
+# ## Plot
+# Plot the results of the calculation.
+
+# In[12]:
+
+
+pl.plot(times, A, 'b.',
+       times, D, 'g.',
+       times, U, 'r.')
+
+
+# ## Compare
+# Compare to the experimental results below.
+
+# In[13]:
 
 
 pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
@@ -127,10 +150,6 @@ pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
        exp.Time.values[:-1], exp.U.values[:-1], 'r.')
 
 
-# In[9]:
-
-
-pl.plot(times, A, 'b.',
-       times, D, 'g.',
-       times, U, 'r.')
-
+# ## Parameters of interest
+# 
+# $\alpha_1 = 2$, $\alpha_2 = 2$, $\gamma = 1$, $k_1 = 1$, $k_2 = 0.01$
