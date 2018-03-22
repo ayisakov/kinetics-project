@@ -14,7 +14,7 @@
 
 
 import numpy as np
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.integrate import odeint
 get_ipython().magic('matplotlib inline')
@@ -36,18 +36,20 @@ t_prefinal = exp.Time.values[-2]
 # $\require{mhchem}$
 # $$\ce{\alpha_1 A + \gamma C->[k_1] \beta B + \gamma C}$$
 # 
-# $$\ce{\alpha_2 A ->[k_2] \upsilon U}$$
+# $$\ce{\alpha_2 A ->[k_2] \epsilon_1 E}$$
 # 
-# $$\ce{\beta B <=>[{k_3}][{k_{-3}}] \delta D}$$
+# $$\ce{\epsilon_2 E <=>[{k_3}][{k_{-3}}] \upsilon U}$$
+# 
+# $$\ce{\beta B <=>[{k_4}][{k_{-4}}] \delta D}$$
 # 
 # 
 # A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.
 # 
 # The following rate laws will be tested.
 # 
-# $$-r_A = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_2 C_A^{\alpha_2}$$
+# $$-r_A = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_2 C_A^{\alpha_2} + k_4 C_A^{\alpha_3}$$
 # 
-# $$r_U = k_2 C_A^{\alpha_2}$$
+# $$r_U = k_2 C_A^{\alpha_2} + k_4 C_A^{\alpha_3}$$
 # 
 # $$r_B = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_{-3} C_D^{\delta} - k_3 C_B^{\beta}$$
 # 
@@ -63,7 +65,7 @@ t_prefinal = exp.Time.values[-2]
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[18]:
+# In[3]:
 
 
 def concentrations(cA0, cC0, T, time, params):
@@ -81,100 +83,147 @@ def concentrations(cA0, cC0, T, time, params):
     """
     
     try:
-        alpha1, alpha2, gamma, k1, k2 = params
+        alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3 = params
     except:
-        print("Params should contain at least 5 parameters!")
+        print("Params should contain at least 9 parameters!")
         return -1, -1, -1, -1,
     else:
-        def dudt(cA):
-            return k2 * cA**alpha2
-
-        def dddt(cA):
-            return k1 * cA**alpha1 * cC0**gamma
         
+        def dadt(cA, cB):
+            return k_1 * cB**beta1 - k1 * cA**alpha
+            
+        def dudt(cB):
+            return k3 * cB**beta3
+
+        def dddt(cB, cC):
+            return k2 * cB**beta2 * cC**gamma
+                
         def rates(parms, time):
             """
             Returns the RHS of the system of ODEs
             """
-            C_A, C_D, C_U = parms
-            rateD = dddt(C_A)
-            rateU = dudt(C_A)
-            rateA = -1. * rateD - rateU
-            assert rateA.shape[0] == 1
-            return (rateA, rateD, rateU)
+            C_A, C_B, C_D, C_U = parms
+            rateD = dddt(C_B, cC0)
+            rateU = dudt(C_B)
+            rateA = dadt(C_A, C_B)
+            rateB = -1 * (rateA + rateD + rateU)
+            return (rateA, rateB, rateD, rateU)
         
         times = np.linspace(0, time, 100)
         
-        result = odeint(rates, (cA0, 0., 0.), times)
+        result = odeint(rates, (cA0, 0., 0., 0.), times)
         
         cA = result[:,0]
-        cD = result[:,1]
-        cU = result[:,2]
+        cB = result[:,1]
+        cD = result[:,2]
+        cU = result[:,3]
         
-    return times, cA, cD, cU
+    return times, cA, cD, cU, cB
 
 
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[55]:
+# In[4]:
 
 
-alpha1 = 2.
-alpha2 = 2.
-gamma = 1.
-k1 = 1.
-k2 = .04
-times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal,
-                                (alpha1, alpha2, gamma, k1, k2))
+alpha = 3. # 3
+beta1 = 2. # 2
+beta2 = 2. # 2
+beta3 = 2. # 2
+gamma = 1. # 1
+k1 = 4. # 2.2
+k_1 = 1.5 # 1.6
+k2 = 1. # 1
+k3 = 0.2 # 0.38
+times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
+                                (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
 
 # ## Plot
 # Plot the results of the calculation.
 
-# In[56]:
+# In[5]:
 
 
-pl.plot(times, A, 'b.',
+plt.plot(times, A, 'b.',
        times, D, 'g.',
-       times, U, 'r.')
+       times, U, 'r.',
+       times, B, 'c.')
 
 
 # ## Compare
 # Compare to the experimental results below.
 
-# In[34]:
+# In[6]:
 
 
-pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
+plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
        exp.Time.values[:-1], exp.D.values[:-1], 'g.',
        exp.Time.values[:-1], exp.U.values[:-1], 'r.')
 
 
-# ## Parameters of interest
-# 
-# $\alpha_1 = 2$, $\alpha_2 = 2$, $\gamma = 1$, $k_1 = 1$, $k_2 = 0.01$
+# In[7]:
 
-# In[35]:
+
+# Plot experimental and calculated results on the same chart
+plt.plot(times, A, 'b.',
+       times, D, 'g.',
+       times, U, 'r.',
+       exp.Time.values[:-1], exp.A.values[:-1], 'c.',
+       exp.Time.values[:-1], exp.D.values[:-1], 'y.',
+       exp.Time.values[:-1], exp.U.values[:-1], 'm.')
+
+
+# ## Parameters of interest
+
+# In[14]:
+
+
+# 3-point differentiation of experimental [A] and [U]
+exp_a = exp.A.values[:-1] # ignore the last long-time value
+exp_u = exp.U.values[:-1] # ignore the last long-time value
+exp_t = exp.Time.values[:-1] # ignore the last long-time value
+delta_t = exp_t[1] - exp_t[0]
+exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
+exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
+
+plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
+
+
+# In[15]:
+
+
+plt.plot(exp_u[1:-1], exp_ru, 'm.')
+
+
+# In[23]:
+
+
+plt.plot(exp_a[1:-1], exp_ra, 'b.')
+
+
+# In[10]:
 
 
 # use a rough parameter optimization to find k2 at the experiment temperature
 # at about 125 seconds U should equal A
 #from scipy.optimize import fsolve
-def objective(k_2):
-    t, a, d, u = concentrations(init.A, init.C, init.T, t_prefinal, (alpha1, alpha2, gamma, k1, k_2))
+def objective(k3_trial):
+    t, a, d, u, b = concentrations(init.A, init.C, init.T, t_prefinal, (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3_trial))
     diff = a[15] - u[15]
     return diff
 
 
-# In[43]:
+# In[68]:
 
 
-guess = 0.8
+guess = 1.0
 max_loops = 1000000
 while max_loops:
     if abs(objective(guess)) < 0.001:
         print("Found a value!")
+        print(guess)
         break
     guess-=0.01
     max_loops-=1
