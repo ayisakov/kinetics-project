@@ -63,7 +63,7 @@ t_prefinal = exp.Time.values[-2]
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[3]:
+# In[18]:
 
 
 def concentrations(cA0, cC0, T, time, params):
@@ -100,6 +100,7 @@ def concentrations(cA0, cC0, T, time, params):
             rateD = dddt(C_A)
             rateU = dudt(C_A)
             rateA = -1. * rateD - rateU
+            assert rateA.shape[0] == 1
             return (rateA, rateD, rateU)
         
         times = np.linspace(0, time, 100)
@@ -116,14 +117,14 @@ def concentrations(cA0, cC0, T, time, params):
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[10]:
+# In[55]:
 
 
 alpha1 = 2.
 alpha2 = 2.
 gamma = 1.
 k1 = 1.
-k2 = 0.01
+k2 = .04
 times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal,
                                 (alpha1, alpha2, gamma, k1, k2))
 
@@ -131,7 +132,7 @@ times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal,
 # ## Plot
 # Plot the results of the calculation.
 
-# In[12]:
+# In[56]:
 
 
 pl.plot(times, A, 'b.',
@@ -142,7 +143,7 @@ pl.plot(times, A, 'b.',
 # ## Compare
 # Compare to the experimental results below.
 
-# In[13]:
+# In[34]:
 
 
 pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
@@ -153,3 +154,34 @@ pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
 # ## Parameters of interest
 # 
 # $\alpha_1 = 2$, $\alpha_2 = 2$, $\gamma = 1$, $k_1 = 1$, $k_2 = 0.01$
+
+# In[35]:
+
+
+# use a rough parameter optimization to find k2 at the experiment temperature
+# at about 125 seconds U should equal A
+#from scipy.optimize import fsolve
+def objective(k_2):
+    t, a, d, u = concentrations(init.A, init.C, init.T, t_prefinal, (alpha1, alpha2, gamma, k1, k_2))
+    diff = a[15] - u[15]
+    return diff
+
+
+# In[43]:
+
+
+guess = 0.8
+max_loops = 1000000
+while max_loops:
+    if abs(objective(guess)) < 0.001:
+        print("Found a value!")
+        break
+    guess-=0.01
+    max_loops-=1
+
+
+# In[44]:
+
+
+guess
+
