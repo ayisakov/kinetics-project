@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.integrate import odeint
+import scipy.optimize as optimize
 get_ipython().magic('matplotlib inline')
 
 
@@ -25,7 +26,7 @@ get_ipython().magic('matplotlib inline')
 # In[2]:
 
 
-filename = "data/exp1426.tsv"
+filename = "data/exp88.txt"
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
 init = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
 t_final = exp.Time.values[-1]
@@ -127,15 +128,15 @@ def concentrations(cA0, cC0, T, time, params):
 # In[4]:
 
 
-alpha = 3. # 3
+alpha = 2. # 3
 beta1 = 2. # 2
-beta2 = 2. # 2
+beta2 = 1. # 2
 beta3 = 2. # 2
 gamma = 1. # 1
 k1 = 4. # 2.2
 k_1 = 1.5 # 1.6
 k2 = 1. # 1
-k3 = 0.2 # 0.38
+k3 = .043 # 0.38
 times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
                                 (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
@@ -170,6 +171,7 @@ plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
 plt.plot(times, A, 'b.',
        times, D, 'g.',
        times, U, 'r.',
+         times, B, 'k.',
        exp.Time.values[:-1], exp.A.values[:-1], 'c.',
        exp.Time.values[:-1], exp.D.values[:-1], 'y.',
        exp.Time.values[:-1], exp.U.values[:-1], 'm.')
@@ -177,7 +179,7 @@ plt.plot(times, A, 'b.',
 
 # ## Parameters of interest
 
-# In[14]:
+# In[8]:
 
 
 # 3-point differentiation of experimental [A] and [U]
@@ -191,19 +193,19 @@ exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
 plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
 
 
-# In[15]:
+# In[9]:
 
 
 plt.plot(exp_u[1:-1], exp_ru, 'm.')
 
 
-# In[23]:
+# In[10]:
 
 
 plt.plot(exp_a[1:-1], exp_ra, 'b.')
 
 
-# In[10]:
+# In[14]:
 
 
 # use a rough parameter optimization to find k2 at the experiment temperature
@@ -215,10 +217,22 @@ def objective(k3_trial):
     return diff
 
 
-# In[68]:
+# In[16]:
 
 
-guess = 1.0
+initial_guess = [2.364]
+result = optimize.minimize(objective, initial_guess)
+if result.success:
+    fitted_params = result.x
+    print(fitted_params)
+else:
+    raise ValueError(result.message)
+
+
+# In[17]:
+
+
+guess = 2.364
 max_loops = 1000000
 while max_loops:
     if abs(objective(guess)) < 0.001:
@@ -229,8 +243,75 @@ while max_loops:
     max_loops-=1
 
 
-# In[44]:
+# In[11]:
 
 
-guess
+import random as rd
+np.random.seed()
+rd.seed()
+import bisect
+import math
+
+
+# In[13]:
+
+
+exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['t', 'Ca', 'Cd', 'Cu'])
+
+
+# In[14]:
+
+
+ca = np.array(exp.Ca)
+cd = np.array(exp.Cd)
+cu = np.array(exp.Cu)
+cb = ca[0] - ca - cd - cu
+print(cb)
+delta_t = exp.t[1] - exp.t[0]
+exp_ra = (np.diff(ca[:-1]) + np.diff(ca[1:])) / (2 * delta_t)
+exp_ru = (np.diff(cu[:-1]) + np.diff(cu[1:])) / (2 * delta_t)
+concentrations =np.array([ca[0:19], cb[0:19], cd[0:19], cu[0:19]])
+
+
+# In[15]:
+
+
+def rate_A(conc, kf, alpha, kr, beta):
+    ca = conc[0]
+    cb = conc[1]
+    return kf ** ca ** alpha - kr *  cb ** beta
+def rate_U(cb, k3):
+    return k3 * cb
+
+
+# In[16]:
+
+
+y_data = exp_ra
+x_data = concentrations[0:2]
+
+popt, pcov = optimize.curve_fit(rate_A, x_data, y_data)
+print(popt)
+print(pcov)
+
+optimal_parameters = popt
+parameter_errors = np.sqrt(np.diag(pcov))
+
+def report(optimal_parameters, covariance):
+    "Make this a function so we can reuse it in cells below"
+    parameter_errors = np.sqrt(np.diag(covariance))
+    for i in range(len(optimal_parameters)):
+        print("Parameter {}: {} +/- {} (1 st. dev.)".format(i,
+                                                            optimal_parameters[i],
+                                                            parameter_errors[i]))
+report(popt, pcov)
+
+
+# In[17]:
+
+
+# stacking example
+stack_rows = np.stack((exp_a, exp_u), 0) # stack along the first axis: exp_a is the first row, exp_u is the second row
+stack_cols = np.stack((exp_a, exp_u), -1) # stack along last axis: exp_a is the first column, exp_u is the second column
+stack_rows
 
