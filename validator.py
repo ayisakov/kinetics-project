@@ -10,22 +10,20 @@
 # where A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.
 # We can control the starting concentration of A, the concentration of C, and the reaction temperature.
 
-# In[1]:
-
+# In[8]:
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.integrate import odeint
-get_ipython().magic('matplotlib inline')
+get_ipython().magic(u'matplotlib inline')
 
 
 # ## Use the following cell to import tab-separated experiment data
 
-# In[2]:
+# In[25]:
 
-
-filename = "data/exp1426.tsv"
+filename = "data/exp88.txt"
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
 init = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
 t_final = exp.Time.values[-1]
@@ -65,8 +63,7 @@ t_prefinal = exp.Time.values[-2]
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[3]:
-
+# In[26]:
 
 def concentrations(cA0, cC0, T, time, params):
     """"
@@ -124,18 +121,17 @@ def concentrations(cA0, cC0, T, time, params):
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[4]:
+# In[56]:
 
-
-alpha = 3. # 3
+alpha = 2. # 3
 beta1 = 2. # 2
-beta2 = 2. # 2
+beta2 = 1. # 2
 beta3 = 2. # 2
 gamma = 1. # 1
 k1 = 4. # 2.2
 k_1 = 1.5 # 1.6
 k2 = 1. # 1
-k3 = 0.2 # 0.38
+k3 = .043 # 0.38
 times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
                                 (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
@@ -143,8 +139,7 @@ times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
 # ## Plot
 # Plot the results of the calculation.
 
-# In[5]:
-
+# In[57]:
 
 plt.plot(times, A, 'b.',
        times, D, 'g.',
@@ -155,21 +150,25 @@ plt.plot(times, A, 'b.',
 # ## Compare
 # Compare to the experimental results below.
 
-# In[6]:
-
+# In[58]:
 
 plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
        exp.Time.values[:-1], exp.D.values[:-1], 'g.',
        exp.Time.values[:-1], exp.U.values[:-1], 'r.')
 
 
-# In[7]:
+# In[21]:
 
+
+
+
+# In[59]:
 
 # Plot experimental and calculated results on the same chart
 plt.plot(times, A, 'b.',
        times, D, 'g.',
        times, U, 'r.',
+         times, B, 'k.',
        exp.Time.values[:-1], exp.A.values[:-1], 'c.',
        exp.Time.values[:-1], exp.D.values[:-1], 'y.',
        exp.Time.values[:-1], exp.U.values[:-1], 'm.')
@@ -177,8 +176,7 @@ plt.plot(times, A, 'b.',
 
 # ## Parameters of interest
 
-# In[14]:
-
+# In[19]:
 
 # 3-point differentiation of experimental [A] and [U]
 exp_a = exp.A.values[:-1] # ignore the last long-time value
@@ -191,20 +189,17 @@ exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
 plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
 
 
-# In[15]:
-
+# In[20]:
 
 plt.plot(exp_u[1:-1], exp_ru, 'm.')
 
 
-# In[23]:
-
+# In[21]:
 
 plt.plot(exp_a[1:-1], exp_ra, 'b.')
 
 
-# In[10]:
-
+# In[22]:
 
 # use a rough parameter optimization to find k2 at the experiment temperature
 # at about 125 seconds U should equal A
@@ -215,10 +210,26 @@ def objective(k3_trial):
     return diff
 
 
-# In[68]:
+# In[23]:
+
+import scipy.optimize as optimize
+import scipy.cu
 
 
-guess = 1.0
+# In[24]:
+
+initial_guess = [2.364]
+result = optimize.minimize(objective, initial_guess)
+if result.success:
+    fitted_params = result.x
+    print(fitted_params)
+else:
+    raise ValueError(result.message)
+
+
+# In[1]:
+
+guess = 2.364
 max_loops = 1000000
 while max_loops:
     if abs(objective(guess)) < 0.001:
@@ -229,8 +240,24 @@ while max_loops:
     max_loops-=1
 
 
-# In[44]:
+# In[70]:
+
+import random as rd
+np.random.seed(5)
+rd.seed(5)
 
 
-guess
+# In[66]:
+
+
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
 
