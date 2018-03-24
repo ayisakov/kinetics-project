@@ -13126,7 +13126,7 @@ kiELje1bn7TYn95sKElqrc9zIpKknjNEJEmtGSKSpNYMEUlSa4aIJKk1Q0SS1JohIklqzRCRJLX2
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[37]:</div>
+<div class="prompt input_prompt">In&nbsp;[53]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="n">ca</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">Ca</span><span class="p">)</span>
@@ -13137,6 +13137,7 @@ kiELje1bn7TYn95sKElqrc9zIpKknjNEJEmtGSKSpNYMEUlSa4aIJKk1Q0SS1JohIklqzRCRJLX2
 <span class="n">delta_t</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">exp</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">exp_ra</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ca</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ca</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">delta_t</span><span class="p">)</span>
 <span class="n">exp_ru</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">cu</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">cu</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">delta_t</span><span class="p">)</span>
+<span class="n">concentrations</span> <span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ca</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">19</span><span class="p">],</span> <span class="n">cb</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">19</span><span class="p">],</span> <span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">19</span><span class="p">],</span> <span class="n">cu</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">19</span><span class="p">]])</span>
 </pre></div>
 
 </div>
@@ -13162,7 +13163,7 @@ kiELje1bn7TYn95sKElqrc9zIpKknjNEJEmtGSKSpNYMEUlSa4aIJKk1Q0SS1JohIklqzRCRJLX2
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[41]:</div>
+<div class="prompt input_prompt">In&nbsp;[49]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="k">def</span> <span class="nf">rate_A</span><span class="p">(</span><span class="n">kf</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">kr</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">ca</span><span class="p">,</span> <span class="n">cb</span><span class="p">):</span>
@@ -13178,17 +13179,19 @@ kiELje1bn7TYn95sKElqrc9zIpKknjNEJEmtGSKSpNYMEUlSa4aIJKk1Q0SS1JohIklqzRCRJLX2
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[40]:</div>
+<div class="prompt input_prompt">In&nbsp;[54]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="n">y_data</span> <span class="o">=</span> <span class="n">exp_ra</span>
-<span class="n">x_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">ca</span><span class="o">.</span><span class="n">any</span><span class="p">(),</span> <span class="n">cb</span><span class="p">)</span>
+<span class="n">x_data</span> <span class="o">=</span> <span class="n">concentrations</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">19</span><span class="p">]</span>
 <span class="kn">import</span> <span class="nn">scipy.optimize</span>
 
-<span class="n">optimal_parameters</span><span class="p">,</span> <span class="n">covariance</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">curve_fit</span><span class="p">(</span><span class="n">rate_A</span><span class="p">,</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">)</span>
+<span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">curve_fit</span><span class="p">(</span><span class="n">rate_U</span><span class="p">,</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">popt</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">pcov</span><span class="p">)</span>
 
-<span class="k">print</span><span class="p">(</span><span class="n">optimal_parameters</span><span class="p">)</span>
-<span class="k">print</span><span class="p">(</span><span class="n">covariance</span><span class="p">)</span>
+<span class="n">optimal_parameters</span> <span class="o">=</span> <span class="n">popt</span>
+<span class="n">parameter_errors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">pcov</span><span class="p">))</span>
 
 <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">optimal_parameters</span><span class="p">,</span> <span class="n">covariance</span><span class="p">):</span>
     <span class="s2">&quot;Make this a function so we can reuse it in cells below&quot;</span>
@@ -13212,22 +13215,38 @@ kiELje1bn7TYn95sKElqrc9zIpKknjNEJEmtGSKSpNYMEUlSa4aIJKk1Q0SS1JohIklqzRCRJLX2
 <div class="output_subarea output_text output_error">
 <pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">TypeError</span>                                 Traceback (most recent call last)
-<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-40-93c37be23bcb&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
-<span class="ansi-green-fg">      1</span> y_data <span class="ansi-yellow-intense-fg ansi-bold">=</span> exp_ra
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span><span class="ansi-yellow-intense-fg ansi-bold"> </span>x_data <span class="ansi-yellow-intense-fg ansi-bold">=</span> np<span class="ansi-yellow-intense-fg ansi-bold">.</span>stack<span class="ansi-yellow-intense-fg ansi-bold">(</span>ca<span class="ansi-yellow-intense-fg ansi-bold">.</span>any<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> cb<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-red-intense-fg ansi-bold">ValueError</span>                                Traceback (most recent call last)
+<span class="ansi-red-intense-fg ansi-bold">ValueError</span>: object too deep for desired array</pre>
+</div>
+</div>
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_text output_error">
+<pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">error</span>                                     Traceback (most recent call last)
+<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-54-64a86b27eebe&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
 <span class="ansi-green-fg">      3</span> <span class="ansi-green-intense-fg ansi-bold">import</span> scipy<span class="ansi-yellow-intense-fg ansi-bold">.</span>optimize
 <span class="ansi-green-fg">      4</span> 
-<span class="ansi-green-fg">      5</span> optimal_parameters<span class="ansi-yellow-intense-fg ansi-bold">,</span> covariance <span class="ansi-yellow-intense-fg ansi-bold">=</span> scipy<span class="ansi-yellow-intense-fg ansi-bold">.</span>optimize<span class="ansi-yellow-intense-fg ansi-bold">.</span>curve_fit<span class="ansi-yellow-intense-fg ansi-bold">(</span>rate_A<span class="ansi-yellow-intense-fg ansi-bold">,</span> x_data<span class="ansi-yellow-intense-fg ansi-bold">,</span> y_data<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span><span class="ansi-yellow-intense-fg ansi-bold"> </span>popt<span class="ansi-yellow-intense-fg ansi-bold">,</span> pcov <span class="ansi-yellow-intense-fg ansi-bold">=</span> scipy<span class="ansi-yellow-intense-fg ansi-bold">.</span>optimize<span class="ansi-yellow-intense-fg ansi-bold">.</span>curve_fit<span class="ansi-yellow-intense-fg ansi-bold">(</span>rate_U<span class="ansi-yellow-intense-fg ansi-bold">,</span> x_data<span class="ansi-yellow-intense-fg ansi-bold">,</span> y_data<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">      6</span> <span class="ansi-green-intense-fg ansi-bold">print</span><span class="ansi-yellow-intense-fg ansi-bold">(</span>popt<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">      7</span> <span class="ansi-green-intense-fg ansi-bold">print</span><span class="ansi-yellow-intense-fg ansi-bold">(</span>pcov<span class="ansi-yellow-intense-fg ansi-bold">)</span>
 
-<span class="ansi-green-intense-fg ansi-bold">C:\Anaconda\lib\site-packages\numpy\core\shape_base.pyc</span> in <span class="ansi-cyan-fg">stack</span><span class="ansi-blue-intense-fg ansi-bold">(arrays, axis)</span>
-<span class="ansi-green-fg">    331</span> 
-<span class="ansi-green-fg">    332</span>     &#34;&#34;&#34;
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 333</span><span class="ansi-yellow-intense-fg ansi-bold">     </span>arrays <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-yellow-intense-fg ansi-bold">[</span>asanyarray<span class="ansi-yellow-intense-fg ansi-bold">(</span>arr<span class="ansi-yellow-intense-fg ansi-bold">)</span> <span class="ansi-green-intense-fg ansi-bold">for</span> arr <span class="ansi-green-intense-fg ansi-bold">in</span> arrays<span class="ansi-yellow-intense-fg ansi-bold">]</span>
-<span class="ansi-green-fg">    334</span>     <span class="ansi-green-intense-fg ansi-bold">if</span> <span class="ansi-green-intense-fg ansi-bold">not</span> arrays<span class="ansi-yellow-intense-fg ansi-bold">:</span>
-<span class="ansi-green-fg">    335</span>         <span class="ansi-green-intense-fg ansi-bold">raise</span> ValueError<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#39;need at least one array to stack&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">C:\Anaconda\lib\site-packages\scipy\optimize\minpack.pyc</span> in <span class="ansi-cyan-fg">curve_fit</span><span class="ansi-blue-intense-fg ansi-bold">(f, xdata, ydata, p0, sigma, absolute_sigma, check_finite, bounds, method, **kwargs)</span>
+<span class="ansi-green-fg">    649</span>         <span class="ansi-red-intense-fg ansi-bold"># Remove full_output from kwargs, otherwise we&#39;re passing it in twice.</span>
+<span class="ansi-green-fg">    650</span>         return_full <span class="ansi-yellow-intense-fg ansi-bold">=</span> kwargs<span class="ansi-yellow-intense-fg ansi-bold">.</span>pop<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#39;full_output&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> False<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 651</span><span class="ansi-yellow-intense-fg ansi-bold">         </span>res <span class="ansi-yellow-intense-fg ansi-bold">=</span> leastsq<span class="ansi-yellow-intense-fg ansi-bold">(</span>func<span class="ansi-yellow-intense-fg ansi-bold">,</span> p0<span class="ansi-yellow-intense-fg ansi-bold">,</span> args<span class="ansi-yellow-intense-fg ansi-bold">=</span>args<span class="ansi-yellow-intense-fg ansi-bold">,</span> full_output<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-yellow-intense-fg ansi-bold">**</span>kwargs<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    652</span>         popt<span class="ansi-yellow-intense-fg ansi-bold">,</span> pcov<span class="ansi-yellow-intense-fg ansi-bold">,</span> infodict<span class="ansi-yellow-intense-fg ansi-bold">,</span> errmsg<span class="ansi-yellow-intense-fg ansi-bold">,</span> ier <span class="ansi-yellow-intense-fg ansi-bold">=</span> res
+<span class="ansi-green-fg">    653</span>         cost <span class="ansi-yellow-intense-fg ansi-bold">=</span> np<span class="ansi-yellow-intense-fg ansi-bold">.</span>sum<span class="ansi-yellow-intense-fg ansi-bold">(</span>infodict<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-blue-intense-fg ansi-bold">&#39;fvec&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">]</span> <span class="ansi-yellow-intense-fg ansi-bold">**</span> <span class="ansi-cyan-intense-fg ansi-bold">2</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
 
-<span class="ansi-red-intense-fg ansi-bold">TypeError</span>: &#39;numpy.bool_&#39; object is not iterable</pre>
+<span class="ansi-green-intense-fg ansi-bold">C:\Anaconda\lib\site-packages\scipy\optimize\minpack.pyc</span> in <span class="ansi-cyan-fg">leastsq</span><span class="ansi-blue-intense-fg ansi-bold">(func, x0, args, Dfun, full_output, col_deriv, ftol, xtol, gtol, maxfev, epsfcn, factor, diag)</span>
+<span class="ansi-green-fg">    385</span>             maxfev <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-cyan-intense-fg ansi-bold">200</span><span class="ansi-yellow-intense-fg ansi-bold">*</span><span class="ansi-yellow-intense-fg ansi-bold">(</span>n <span class="ansi-yellow-intense-fg ansi-bold">+</span> <span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    386</span>         retval = _minpack._lmdif(func, x0, args, full_output, ftol, xtol,
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 387</span><span class="ansi-yellow-intense-fg ansi-bold">                                  gtol, maxfev, epsfcn, factor, diag)
+</span><span class="ansi-green-fg">    388</span>     <span class="ansi-green-intense-fg ansi-bold">else</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    389</span>         <span class="ansi-green-intense-fg ansi-bold">if</span> col_deriv<span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-red-intense-fg ansi-bold">error</span>: Result from function call is not a proper array of floats.</pre>
 </div>
 </div>
 

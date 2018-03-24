@@ -256,7 +256,7 @@ from numpy import loadtxt
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['t', 'Ca', 'Cd', 'Cu'])
 
 
-# In[37]:
+# In[53]:
 
 ca = np.array(exp.Ca)
 cd = np.array(exp.Cd)
@@ -266,9 +266,10 @@ print(cb)
 delta_t = exp.t[1] - exp.t[0]
 exp_ra = (np.diff(ca[:-1]) + np.diff(ca[1:])) / (2 * delta_t)
 exp_ru = (np.diff(cu[:-1]) + np.diff(cu[1:])) / (2 * delta_t)
+concentrations =np.array([ca[0:19], cb[0:19], cd[0:19], cu[0:19]])
 
 
-# In[41]:
+# In[49]:
 
 def rate_A(kf, alpha, kr, beta, ca, cb):
     return kf ** ca ** alpha - kr *  cb ** beta
@@ -276,16 +277,18 @@ def rate_U(k3, cb):
     return k3 * cb
 
 
-# In[40]:
+# In[54]:
 
 y_data = exp_ra
-x_data = np.stack(ca.any(), cb)
+x_data = concentrations[0:19]
 import scipy.optimize
 
-optimal_parameters, covariance = scipy.optimize.curve_fit(rate_A, x_data, y_data)
+popt, pcov = scipy.optimize.curve_fit(rate_U, x_data, y_data)
+print(popt)
+print(pcov)
 
-print(optimal_parameters)
-print(covariance)
+optimal_parameters = popt
+parameter_errors = np.sqrt(np.diag(pcov))
 
 def report(optimal_parameters, covariance):
     "Make this a function so we can reuse it in cells below"
