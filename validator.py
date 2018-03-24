@@ -10,7 +10,7 @@
 # where A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.
 # We can control the starting concentration of A, the concentration of C, and the reaction temperature.
 
-# In[8]:
+# In[1]:
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ get_ipython().magic(u'matplotlib inline')
 
 # ## Use the following cell to import tab-separated experiment data
 
-# In[25]:
+# In[2]:
 
 filename = "data/exp88.txt"
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
@@ -63,7 +63,7 @@ t_prefinal = exp.Time.values[-2]
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[26]:
+# In[3]:
 
 def concentrations(cA0, cC0, T, time, params):
     """"
@@ -121,7 +121,7 @@ def concentrations(cA0, cC0, T, time, params):
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[56]:
+# In[4]:
 
 alpha = 2. # 3
 beta1 = 2. # 2
@@ -139,7 +139,7 @@ times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
 # ## Plot
 # Plot the results of the calculation.
 
-# In[57]:
+# In[5]:
 
 plt.plot(times, A, 'b.',
        times, D, 'g.',
@@ -150,19 +150,19 @@ plt.plot(times, A, 'b.',
 # ## Compare
 # Compare to the experimental results below.
 
-# In[58]:
+# In[6]:
 
 plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
        exp.Time.values[:-1], exp.D.values[:-1], 'g.',
        exp.Time.values[:-1], exp.U.values[:-1], 'r.')
 
 
-# In[21]:
+# In[ ]:
 
 
 
 
-# In[59]:
+# In[7]:
 
 # Plot experimental and calculated results on the same chart
 plt.plot(times, A, 'b.',
@@ -176,7 +176,7 @@ plt.plot(times, A, 'b.',
 
 # ## Parameters of interest
 
-# In[19]:
+# In[8]:
 
 # 3-point differentiation of experimental [A] and [U]
 exp_a = exp.A.values[:-1] # ignore the last long-time value
@@ -189,17 +189,17 @@ exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
 plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
 
 
-# In[20]:
+# In[9]:
 
 plt.plot(exp_u[1:-1], exp_ru, 'm.')
 
 
-# In[21]:
+# In[10]:
 
 plt.plot(exp_a[1:-1], exp_ra, 'b.')
 
 
-# In[22]:
+# In[11]:
 
 # use a rough parameter optimization to find k2 at the experiment temperature
 # at about 125 seconds U should equal A
@@ -210,13 +210,13 @@ def objective(k3_trial):
     return diff
 
 
-# In[23]:
+# In[12]:
 
 import scipy.optimize as optimize
 import scipy.cu
 
 
-# In[24]:
+# In[ ]:
 
 initial_guess = [2.364]
 result = optimize.minimize(objective, initial_guess)
@@ -227,7 +227,7 @@ else:
     raise ValueError(result.message)
 
 
-# In[1]:
+# In[ ]:
 
 guess = 2.364
 max_loops = 1000000
@@ -240,21 +240,61 @@ while max_loops:
     max_loops-=1
 
 
-# In[70]:
+# In[18]:
 
 import random as rd
-np.random.seed(5)
-rd.seed(5)
+np.random.seed()
+rd.seed()
+import bisect
+import math
 
 
-# In[66]:
+# In[22]:
+
+from numpy import loadtxt
+
+exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['t', 'Ca', 'Cd', 'Cu'])
 
 
+# In[37]:
+
+ca = np.array(exp.Ca)
+cd = np.array(exp.Cd)
+cu = np.array(exp.Cu)
+cb = ca[0] - ca - cd - cu
+print(cb)
+delta_t = exp.t[1] - exp.t[0]
+exp_ra = (np.diff(ca[:-1]) + np.diff(ca[1:])) / (2 * delta_t)
+exp_ru = (np.diff(cu[:-1]) + np.diff(cu[1:])) / (2 * delta_t)
 
 
-# In[ ]:
+# In[41]:
+
+def rate_A(kf, alpha, kr, beta, ca, cb):
+    return kf ** ca ** alpha - kr *  cb ** beta
+def rate_U(k3, cb):
+    return k3 * cb
 
 
+# In[40]:
+
+y_data = exp_ra
+x_data = np.stack(ca.any(), cb)
+import scipy.optimize
+
+optimal_parameters, covariance = scipy.optimize.curve_fit(rate_A, x_data, y_data)
+
+print(optimal_parameters)
+print(covariance)
+
+def report(optimal_parameters, covariance):
+    "Make this a function so we can reuse it in cells below"
+    parameter_errors = np.sqrt(np.diag(covariance))
+    for i in range(len(optimal_parameters)):
+        print("Parameter {}: {} +/- {} (1 st. dev.)".format(i,
+                                                            optimal_parameters[i],
+                                                            parameter_errors[i]))
+report(optimal_parameters, covariance)
 
 
 # In[ ]:
