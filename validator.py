@@ -14,9 +14,10 @@
 
 
 import numpy as np
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.integrate import odeint
+import scipy.optimize as optimize
 get_ipython().magic('matplotlib inline')
 
 
@@ -25,7 +26,7 @@ get_ipython().magic('matplotlib inline')
 # In[2]:
 
 
-filename = "data/exp1426.tsv"
+filename = "data/exp88.txt"
 exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
 init = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
 t_final = exp.Time.values[-1]
@@ -36,18 +37,20 @@ t_prefinal = exp.Time.values[-2]
 # $\require{mhchem}$
 # $$\ce{\alpha_1 A + \gamma C->[k_1] \beta B + \gamma C}$$
 # 
-# $$\ce{\alpha_2 A ->[k_2] \upsilon U}$$
+# $$\ce{\alpha_2 A ->[k_2] \epsilon_1 E}$$
 # 
-# $$\ce{\beta B <=>[{k_3}][{k_{-3}}] \delta D}$$
+# $$\ce{\epsilon_2 E <=>[{k_3}][{k_{-3}}] \upsilon U}$$
+# 
+# $$\ce{\beta B <=>[{k_4}][{k_{-4}}] \delta D}$$
 # 
 # 
 # A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.
 # 
 # The following rate laws will be tested.
 # 
-# $$-r_A = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_2 C_A^{\alpha_2}$$
+# $$-r_A = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_2 C_A^{\alpha_2} + k_4 C_A^{\alpha_3}$$
 # 
-# $$r_U = k_2 C_A^{\alpha_2}$$
+# $$r_U = k_2 C_A^{\alpha_2} + k_4 C_A^{\alpha_3}$$
 # 
 # $$r_B = k_1 C_A^{\alpha_1} C_C^{\gamma} + k_{-3} C_D^{\delta} - k_3 C_B^{\beta}$$
 # 
@@ -63,7 +66,7 @@ t_prefinal = exp.Time.values[-2]
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[18]:
+# In[3]:
 
 
 def concentrations(cA0, cC0, T, time, params):
@@ -81,107 +84,234 @@ def concentrations(cA0, cC0, T, time, params):
     """
     
     try:
-        alpha1, alpha2, gamma, k1, k2 = params
+        alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3 = params
     except:
-        print("Params should contain at least 5 parameters!")
+        print("Params should contain at least 9 parameters!")
         return -1, -1, -1, -1,
     else:
-        def dudt(cA):
-            return k2 * cA**alpha2
-
-        def dddt(cA):
-            return k1 * cA**alpha1 * cC0**gamma
         
+        def dadt(cA, cB):
+            return k_1 * cB**beta1 - k1 * cA**alpha
+            
+        def dudt(cB):
+            return k3 * cB**beta3
+
+        def dddt(cB, cC):
+            return k2 * cB**beta2 * cC**gamma
+                
         def rates(parms, time):
             """
             Returns the RHS of the system of ODEs
             """
-            C_A, C_D, C_U = parms
-            rateD = dddt(C_A)
-            rateU = dudt(C_A)
-            rateA = -1. * rateD - rateU
-            assert rateA.shape[0] == 1
-            return (rateA, rateD, rateU)
+            C_A, C_B, C_D, C_U = parms
+            rateD = dddt(C_B, cC0)
+            rateU = dudt(C_B)
+            rateA = dadt(C_A, C_B)
+            rateB = -1 * (rateA + rateD + rateU)
+            return (rateA, rateB, rateD, rateU)
         
         times = np.linspace(0, time, 100)
         
-        result = odeint(rates, (cA0, 0., 0.), times)
+        result = odeint(rates, (cA0, 0., 0., 0.), times)
         
         cA = result[:,0]
-        cD = result[:,1]
-        cU = result[:,2]
+        cB = result[:,1]
+        cD = result[:,2]
+        cU = result[:,3]
         
-    return times, cA, cD, cU
+    return times, cA, cD, cU, cB
 
 
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[55]:
+# In[4]:
 
 
-alpha1 = 2.
-alpha2 = 2.
-gamma = 1.
-k1 = 1.
-k2 = .04
-times, A, D, U = concentrations(init.A, init.C, init.T, t_prefinal,
-                                (alpha1, alpha2, gamma, k1, k2))
+alpha = 2. # 3
+beta1 = 2. # 2
+beta2 = 1. # 2
+beta3 = 2. # 2
+gamma = 1. # 1
+k1 = 4. # 2.2
+k_1 = 1.5 # 1.6
+k2 = 1. # 1
+k3 = .043 # 0.38
+times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
+                                (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
 
 # ## Plot
 # Plot the results of the calculation.
 
-# In[56]:
+# In[5]:
 
 
-pl.plot(times, A, 'b.',
+plt.plot(times, A, 'b.',
        times, D, 'g.',
-       times, U, 'r.')
+       times, U, 'r.',
+       times, B, 'c.')
 
 
 # ## Compare
 # Compare to the experimental results below.
 
-# In[34]:
+# In[6]:
 
 
-pl.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
+plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.',
        exp.Time.values[:-1], exp.D.values[:-1], 'g.',
        exp.Time.values[:-1], exp.U.values[:-1], 'r.')
 
 
-# ## Parameters of interest
-# 
-# $\alpha_1 = 2$, $\alpha_2 = 2$, $\gamma = 1$, $k_1 = 1$, $k_2 = 0.01$
+# In[7]:
 
-# In[35]:
+
+# Plot experimental and calculated results on the same chart
+plt.plot(times, A, 'b.',
+       times, D, 'g.',
+       times, U, 'r.',
+         times, B, 'k.',
+       exp.Time.values[:-1], exp.A.values[:-1], 'c.',
+       exp.Time.values[:-1], exp.D.values[:-1], 'y.',
+       exp.Time.values[:-1], exp.U.values[:-1], 'm.')
+
+
+# ## Parameters of interest
+
+# In[8]:
+
+
+# 3-point differentiation of experimental [A] and [U]
+exp_a = exp.A.values[:-1] # ignore the last long-time value
+exp_u = exp.U.values[:-1] # ignore the last long-time value
+exp_t = exp.Time.values[:-1] # ignore the last long-time value
+delta_t = exp_t[1] - exp_t[0]
+exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
+exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
+
+plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
+
+
+# In[9]:
+
+
+plt.plot(exp_u[1:-1], exp_ru, 'm.')
+
+
+# In[10]:
+
+
+plt.plot(exp_a[1:-1], exp_ra, 'b.')
+
+
+# In[14]:
 
 
 # use a rough parameter optimization to find k2 at the experiment temperature
 # at about 125 seconds U should equal A
 #from scipy.optimize import fsolve
-def objective(k_2):
-    t, a, d, u = concentrations(init.A, init.C, init.T, t_prefinal, (alpha1, alpha2, gamma, k1, k_2))
+def objective(k3_trial):
+    t, a, d, u, b = concentrations(init.A, init.C, init.T, t_prefinal, (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3_trial))
     diff = a[15] - u[15]
     return diff
 
 
-# In[43]:
+# In[16]:
 
 
-guess = 0.8
+initial_guess = [2.364]
+result = optimize.minimize(objective, initial_guess)
+if result.success:
+    fitted_params = result.x
+    print(fitted_params)
+else:
+    raise ValueError(result.message)
+
+
+# In[17]:
+
+
+guess = 2.364
 max_loops = 1000000
 while max_loops:
     if abs(objective(guess)) < 0.001:
         print("Found a value!")
+        print(guess)
         break
     guess-=0.01
     max_loops-=1
 
 
-# In[44]:
+# In[11]:
 
 
-guess
+import random as rd
+np.random.seed()
+rd.seed()
+import bisect
+import math
+
+
+# In[13]:
+
+
+exp = pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['t', 'Ca', 'Cd', 'Cu'])
+
+
+# In[14]:
+
+
+ca = np.array(exp.Ca)
+cd = np.array(exp.Cd)
+cu = np.array(exp.Cu)
+cb = ca[0] - ca - cd - cu
+print(cb)
+delta_t = exp.t[1] - exp.t[0]
+exp_ra = (np.diff(ca[:-1]) + np.diff(ca[1:])) / (2 * delta_t)
+exp_ru = (np.diff(cu[:-1]) + np.diff(cu[1:])) / (2 * delta_t)
+concentrations =np.array([ca[0:19], cb[0:19], cd[0:19], cu[0:19]])
+
+
+# In[15]:
+
+
+def rate_A(conc, kf, alpha, kr, beta):
+    ca = conc[0]
+    cb = conc[1]
+    return kf ** ca ** alpha - kr *  cb ** beta
+def rate_U(cb, k3):
+    return k3 * cb
+
+
+# In[16]:
+
+
+y_data = exp_ra
+x_data = concentrations[0:2]
+
+popt, pcov = optimize.curve_fit(rate_A, x_data, y_data)
+print(popt)
+print(pcov)
+
+optimal_parameters = popt
+parameter_errors = np.sqrt(np.diag(pcov))
+
+def report(optimal_parameters, covariance):
+    "Make this a function so we can reuse it in cells below"
+    parameter_errors = np.sqrt(np.diag(covariance))
+    for i in range(len(optimal_parameters)):
+        print("Parameter {}: {} +/- {} (1 st. dev.)".format(i,
+                                                            optimal_parameters[i],
+                                                            parameter_errors[i]))
+report(popt, pcov)
+
+
+# In[17]:
+
+
+# stacking example
+stack_rows = np.stack((exp_a, exp_u), 0) # stack along the first axis: exp_a is the first row, exp_u is the second row
+stack_cols = np.stack((exp_a, exp_u), -1) # stack along last axis: exp_a is the first column, exp_u is the second column
+stack_rows
 
