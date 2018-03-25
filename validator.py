@@ -24,20 +24,19 @@ get_ipython().magic('matplotlib inline')
 
 # ## Use the following cell to import tab-separated experiment data
 
-# In[3]:
+# In[2]:
 
 
-filename = "data/exp3431.tsv"
 def readdata(filename):
     return pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=2, names=['Time', 'A', 'D', 'U'])
 def readinit(filename):
     return pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
 
 
-# In[5]:
+# In[3]:
 
 
-filename = "data/exp3431.tsv"
+filename = "data/exp1990.tsv"
 init = readinit(filename)
 exp = readdata(filename)
 t_final = exp.Time.values[-1]
@@ -46,7 +45,7 @@ t_prefinal = exp.Time.values[-2]
 
 # ## Use the following cell to assemble multiple experiment files for experiments performed at the same conditions
 
-# In[6]:
+# In[4]:
 
 
 datadir = "data/"
@@ -85,7 +84,7 @@ t_final_concat = max(exp_times_concat)
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[7]:
+# In[405]:
 
 
 def dadt(cA, cB, alpha, beta1, k1, k_1):
@@ -131,7 +130,7 @@ def concentrations(cA0, cC0, T, time, params):
     else:                
 
         
-        times = np.linspace(0, time, 100)
+        times = np.linspace(0, time, 1000)
         
         result = odeint(rates, (cA0, 0., 0., 0., cC0), times)
         
@@ -146,23 +145,23 @@ def concentrations(cA0, cC0, T, time, params):
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[8]:
+# In[423]:
 
 
-alpha = 2. # 3
-beta1 = 2. # 2
-beta2 = 2. # 2
-beta3 = 2 # 2
-gamma = 1. # 1
-k1 = 0.1 # 2.2
-k_1 = 0.02 # 1.6
-k2 = 1. # 1
-k3 = 1 # 0.38
+alpha = 1.
+beta1 = 1.
+beta2 = 2.
+beta3 = 2.
+gamma = 1.
+k1 = 0.12
+k_1 = k1 / 0.308 # from equilibrium relationship
+k2 = 1.
+k3 = 0.50
 times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
                                 (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
 
-# In[9]:
+# In[424]:
 
 
 times_concat, A_concat, D_concat, U_concat, B_concat = concentrations(init_concat.A,
@@ -175,7 +174,7 @@ times_concat, A_concat, D_concat, U_concat, B_concat = concentrations(init_conca
 # ## Compare
 # Compare to the experimental results below.
 
-# In[10]:
+# In[425]:
 
 
 exp_possible_b = init.A.values[0] - (exp.A.values + exp.U.values) # mol/L of A unaccounted for (potential B)
@@ -188,14 +187,14 @@ plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b^', label='A (exp)')
 plt.plot(exp.Time.values[:-1], exp.D.values[:-1], 'g^', label='D (exp)')
 plt.plot(exp.Time.values[:-1], exp.U.values[:-1], 'r^', label='U (exp)')
 plt.plot(exp.Time.values[:-1], exp_possible_b[:-1], 'k^', label='B (exp)')
-plt.legend()
+plt.legend(loc=1)
 plt.title('Experiment versus calculations')
 plt.xlabel('Time (s)')
 plt.ylabel('Concentration (M)')
 plt.show()
 
 
-# In[11]:
+# In[426]:
 
 
 exp_possible_b_concat = init_concat.A.values[0] - (a_concat + u_concat) # mol/L of A unaccounted for (potential B)
@@ -229,6 +228,16 @@ delta_t = exp_t[1] - exp_t[0]
 exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
 exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
 exp_r_missing_a = (np.diff(exp_missing_a[:-1]) + np.diff(exp_missing_a[1:])) / (2 * delta_t)
+
+
+# In[8]:
+
+
+# 3-point differentiation of concatenated experimental [A], [U], and possible [B]
+##### TO DO #####
+#exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
+#exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
+#exp_r_missing_a = (np.diff(exp_missing_a[:-1]) + np.diff(exp_missing_a[1:])) / (2 * delta_t)
 
 
 # In[9]:
