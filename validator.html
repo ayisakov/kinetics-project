@@ -11793,6 +11793,7 @@ We can control the starting concentration of A, the concentration of C, and the 
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="k">import</span> <span class="n">odeint</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">curve_fit</span>
 <span class="o">%</span><span class="k">matplotlib</span> inline
 </pre></div>
 
@@ -11854,7 +11855,16 @@ $$\ce{\alpha_1 A + \gamma C-&gt;[k_1] \beta B + \gamma C}$$</p>
 <div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">concentrations</span><span class="p">(</span><span class="n">cA0</span><span class="p">,</span> <span class="n">cC0</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">dadt</span><span class="p">(</span><span class="n">cA</span><span class="p">,</span> <span class="n">cB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta1</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k_1</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">k_1</span> <span class="o">*</span> <span class="n">cB</span><span class="o">**</span><span class="n">beta1</span> <span class="o">-</span> <span class="n">k1</span> <span class="o">*</span> <span class="n">cA</span><span class="o">**</span><span class="n">alpha</span>
+    
+<span class="k">def</span> <span class="nf">dudt</span><span class="p">(</span><span class="n">cB</span><span class="p">,</span> <span class="n">beta3</span><span class="p">,</span> <span class="n">k3</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">k3</span> <span class="o">*</span> <span class="n">cB</span><span class="o">**</span><span class="n">beta3</span>
+
+<span class="k">def</span> <span class="nf">dddt</span><span class="p">(</span><span class="n">cB</span><span class="p">,</span> <span class="n">cC</span><span class="p">,</span> <span class="n">beta2</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">k2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">cB</span><span class="o">**</span><span class="n">beta2</span> <span class="o">*</span> <span class="n">cC</span><span class="o">**</span><span class="n">gamma</span>
+
+<span class="k">def</span> <span class="nf">concentrations</span><span class="p">(</span><span class="n">cA0</span><span class="p">,</span> <span class="n">cC0</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;&quot;</span>
 <span class="sd">    This function calculates the concentrations of the reacting species using a proposed rate law</span>
 <span class="sd">    cA (mol/L) is the initial concentration of reactant A</span>
@@ -11873,25 +11883,15 @@ $$\ce{\alpha_1 A + \gamma C-&gt;[k_1] \beta B + \gamma C}$$</p>
     <span class="k">except</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Params should contain at least 9 parameters!&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="k">else</span><span class="p">:</span>
-        
-        <span class="k">def</span> <span class="nf">dadt</span><span class="p">(</span><span class="n">cA</span><span class="p">,</span> <span class="n">cB</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">k_1</span> <span class="o">*</span> <span class="n">cB</span><span class="o">**</span><span class="n">beta1</span> <span class="o">-</span> <span class="n">k1</span> <span class="o">*</span> <span class="n">cA</span><span class="o">**</span><span class="n">alpha</span>
-            
-        <span class="k">def</span> <span class="nf">dudt</span><span class="p">(</span><span class="n">cB</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">k3</span> <span class="o">*</span> <span class="n">cB</span><span class="o">**</span><span class="n">beta3</span>
-
-        <span class="k">def</span> <span class="nf">dddt</span><span class="p">(</span><span class="n">cB</span><span class="p">,</span> <span class="n">cC</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">cB</span><span class="o">**</span><span class="n">beta2</span> <span class="o">*</span> <span class="n">cC</span><span class="o">**</span><span class="n">gamma</span>
-                
+    <span class="k">else</span><span class="p">:</span>                
         <span class="k">def</span> <span class="nf">rates</span><span class="p">(</span><span class="n">parms</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
             <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Returns the RHS of the system of ODEs</span>
 <span class="sd">            &quot;&quot;&quot;</span>
             <span class="n">C_A</span><span class="p">,</span> <span class="n">C_B</span><span class="p">,</span> <span class="n">C_D</span><span class="p">,</span> <span class="n">C_U</span> <span class="o">=</span> <span class="n">parms</span>
-            <span class="n">rateD</span> <span class="o">=</span> <span class="n">dddt</span><span class="p">(</span><span class="n">C_B</span><span class="p">,</span> <span class="n">cC0</span><span class="p">)</span>
-            <span class="n">rateU</span> <span class="o">=</span> <span class="n">dudt</span><span class="p">(</span><span class="n">C_B</span><span class="p">)</span>
-            <span class="n">rateA</span> <span class="o">=</span> <span class="n">dadt</span><span class="p">(</span><span class="n">C_A</span><span class="p">,</span> <span class="n">C_B</span><span class="p">)</span>
+            <span class="n">rateD</span> <span class="o">=</span> <span class="n">dddt</span><span class="p">(</span><span class="n">C_B</span><span class="p">,</span> <span class="n">cC0</span><span class="p">,</span> <span class="n">beta2</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k_1</span><span class="p">)</span>
+            <span class="n">rateU</span> <span class="o">=</span> <span class="n">dudt</span><span class="p">(</span><span class="n">C_B</span><span class="p">,</span> <span class="n">beta3</span><span class="p">,</span> <span class="n">k3</span><span class="p">)</span>
+            <span class="n">rateA</span> <span class="o">=</span> <span class="n">dadt</span><span class="p">(</span><span class="n">C_A</span><span class="p">,</span> <span class="n">C_B</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta1</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k_1</span><span class="p">)</span>
             <span class="n">rateB</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="p">(</span><span class="n">rateA</span> <span class="o">+</span> <span class="n">rateD</span> <span class="o">+</span> <span class="n">rateU</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">rateA</span><span class="p">,</span> <span class="n">rateB</span><span class="p">,</span> <span class="n">rateD</span><span class="p">,</span> <span class="n">rateU</span><span class="p">)</span>
         
@@ -11980,10 +11980,10 @@ $$\ce{\alpha_1 A + \gamma C-&gt;[k_1] \beta B + \gamma C}$$</p>
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7f8ed74c9048&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed74c2f60&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ede936cc0&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ede925198&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f6d0573d9b0&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d0573db38&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d056cb518&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d056cbcc0&gt;]</pre>
 </div>
 
 </div>
@@ -12208,9 +12208,9 @@ BDMzSzkQzMwMcCCYmVnKgWBmZgD8fznyBbgAp7y+AAAAAElFTkSuQmCC
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7f8ed7380a90&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed7380c18&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed73885c0&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f6d05645a20&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d05645ba8&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d055cd550&gt;]</pre>
 </div>
 
 </div>
@@ -12390,12 +12390,12 @@ AUs6o+lLTOwvAAAAAElFTkSuQmCC
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7f8ed72cc710&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed72cc898&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed72d3240&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed72d39e8&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed72dd208&gt;,
- &lt;matplotlib.lines.Line2D at 0x7f8ed72dd9e8&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f6d0550e748&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d0550e8d0&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d05515278&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d05515a20&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d0551e240&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d0551ea20&gt;]</pre>
 </div>
 
 </div>
@@ -12611,7 +12611,7 @@ AoKIiIQUEEREBID/D83oB0KxM6nWAAAAAElFTkSuQmCC
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># 3-point differentiation of experimental [A] and [U]</span>
@@ -12635,14 +12635,14 @@ AoKIiIQUEEREBID/D83oB0KxM6nWAAAAAElFTkSuQmCC
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[14]:</div>
+<div class="prompt output_prompt">Out[8]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7fa938f33438&gt;,
- &lt;matplotlib.lines.Line2D at 0x7fa938f335c0&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f6d054561d0&gt;,
+ &lt;matplotlib.lines.Line2D at 0x7f6d05456358&gt;]</pre>
 </div>
 
 </div>
@@ -12807,7 +12807,7 @@ TjRmZlYoJxozMyuUE42ZmRXq/wOui9yCaSA/1wAAAABJRU5ErkJggg==
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">exp_u</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">exp_ru</span><span class="p">,</span> <span class="s1">&#39;m.&#39;</span><span class="p">)</span>
@@ -12823,13 +12823,13 @@ TjRmZlYoJxozMyuUE42ZmRXq/wOui9yCaSA/1wAAAABJRU5ErkJggg==
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[15]:</div>
+<div class="prompt output_prompt">Out[9]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7fa938ecf208&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f6d053e0438&gt;]</pre>
 </div>
 
 </div>
@@ -12964,7 +12964,7 @@ LvsAAAAASUVORK5CYII=
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">exp_a</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">exp_ra</span><span class="p">,</span> <span class="s1">&#39;b.&#39;</span><span class="p">)</span>
@@ -12980,13 +12980,13 @@ LvsAAAAASUVORK5CYII=
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[23]:</div>
+<div class="prompt output_prompt">Out[10]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&lt;matplotlib.lines.Line2D at 0x7fa938a85ba8&gt;]</pre>
+<pre>[&lt;matplotlib.lines.Line2D at 0x7f6d05375128&gt;]</pre>
 </div>
 
 </div>
@@ -13104,98 +13104,6 @@ FnP83X//fwJ8eWD50cXsu3e2S5KaeGhLktTEIJEkNTFIJElNDBJJUhODRJLUxCCRJDUxSCRJTQwS
 SVKT/w/I2SEaVuHmmgAAAABJRU5ErkJggg==
 "
 >
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[10]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># use a rough parameter optimization to find k2 at the experiment temperature</span>
-<span class="c1"># at about 125 seconds U should equal A</span>
-<span class="c1">#from scipy.optimize import fsolve</span>
-<span class="k">def</span> <span class="nf">objective</span><span class="p">(</span><span class="n">k3_trial</span><span class="p">):</span>
-    <span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">concentrations</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">init</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="n">init</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">t_prefinal</span><span class="p">,</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta1</span><span class="p">,</span> <span class="n">beta2</span><span class="p">,</span> <span class="n">beta3</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k_1</span><span class="p">,</span> <span class="n">k2</span><span class="p">,</span> <span class="n">k3_trial</span><span class="p">))</span>
-    <span class="n">diff</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">15</span><span class="p">]</span> <span class="o">-</span> <span class="n">u</span><span class="p">[</span><span class="mi">15</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">diff</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[68]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">guess</span> <span class="o">=</span> <span class="mf">1.0</span>
-<span class="n">max_loops</span> <span class="o">=</span> <span class="mi">1000000</span>
-<span class="k">while</span> <span class="n">max_loops</span><span class="p">:</span>
-    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">objective</span><span class="p">(</span><span class="n">guess</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">0.001</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Found a value!&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">guess</span><span class="p">)</span>
-        <span class="k">break</span>
-    <span class="n">guess</span><span class="o">-=</span><span class="mf">0.01</span>
-    <span class="n">max_loops</span><span class="o">-=</span><span class="mi">1</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>Found a value!
-0.1999999999999993
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[44]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">guess</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt output_prompt">Out[44]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>0.039999999999999473</pre>
 </div>
 
 </div>

@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.integrate import odeint
+from scipy.optimize import curve_fit
 get_ipython().magic('matplotlib inline')
 
 
@@ -68,6 +69,15 @@ t_prefinal = exp.Time.values[-2]
 # In[3]:
 
 
+def dadt(cA, cB, alpha, beta1, k1, k_1):
+    return k_1 * cB**beta1 - k1 * cA**alpha
+    
+def dudt(cB, beta3, k3):
+    return k3 * cB**beta3
+
+def dddt(cB, cC, beta2, gamma, k2):
+    return k2 * cB**beta2 * cC**gamma
+
 def concentrations(cA0, cC0, T, time, params):
     """"
     This function calculates the concentrations of the reacting species using a proposed rate law
@@ -87,25 +97,15 @@ def concentrations(cA0, cC0, T, time, params):
     except:
         print("Params should contain at least 9 parameters!")
         return -1, -1, -1, -1,
-    else:
-        
-        def dadt(cA, cB):
-            return k_1 * cB**beta1 - k1 * cA**alpha
-            
-        def dudt(cB):
-            return k3 * cB**beta3
-
-        def dddt(cB, cC):
-            return k2 * cB**beta2 * cC**gamma
-                
+    else:                
         def rates(parms, time):
             """
             Returns the RHS of the system of ODEs
             """
             C_A, C_B, C_D, C_U = parms
-            rateD = dddt(C_B, cC0)
-            rateU = dudt(C_B)
-            rateA = dadt(C_A, C_B)
+            rateD = dddt(C_B, cC0, beta2, k1, k_1)
+            rateU = dudt(C_B, beta3, k3)
+            rateA = dadt(C_A, C_B, alpha, beta1, k1, k_1)
             rateB = -1 * (rateA + rateD + rateU)
             return (rateA, rateB, rateD, rateU)
         
@@ -177,7 +177,7 @@ plt.plot(times, A, 'b.',
 
 # ## Parameters of interest
 
-# In[14]:
+# In[8]:
 
 
 # 3-point differentiation of experimental [A] and [U]
@@ -191,46 +191,14 @@ exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
 plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
 
 
-# In[15]:
+# In[9]:
 
 
 plt.plot(exp_u[1:-1], exp_ru, 'm.')
 
 
-# In[23]:
-
-
-plt.plot(exp_a[1:-1], exp_ra, 'b.')
-
-
 # In[10]:
 
 
-# use a rough parameter optimization to find k2 at the experiment temperature
-# at about 125 seconds U should equal A
-#from scipy.optimize import fsolve
-def objective(k3_trial):
-    t, a, d, u, b = concentrations(init.A, init.C, init.T, t_prefinal, (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3_trial))
-    diff = a[15] - u[15]
-    return diff
-
-
-# In[68]:
-
-
-guess = 1.0
-max_loops = 1000000
-while max_loops:
-    if abs(objective(guess)) < 0.001:
-        print("Found a value!")
-        print(guess)
-        break
-    guess-=0.01
-    max_loops-=1
-
-
-# In[44]:
-
-
-guess
+plt.plot(exp_a[1:-1], exp_ra, 'b.')
 
