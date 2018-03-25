@@ -10,7 +10,7 @@
 # where A is the starting reagent, C is the catalyst, D is the desired product, and U is the undesired product.
 # We can control the starting concentration of A, the concentration of C, and the reaction temperature.
 
-# In[32]:
+# In[1]:
 
 
 import numpy as np
@@ -114,18 +114,18 @@ def concentrations(cA0, cC0, T, time, params):
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[4]:
+# In[8]:
 
 
 alpha = 2. # 3
 beta1 = 2. # 2
 beta2 = 2. # 2
-beta3 = 2.2 # 2
+beta3 = 1.75 # 2
 gamma = 1. # 1
-k1 = 4. # 2.2
-k_1 = 1.5 # 1.6
+k1 = 0.05 # 2.2
+k_1 = 0.005 # 1.6
 k2 = 1. # 1
-k3 = 0.647 # 0.38
+k3 = 0.21 # 0.38
 times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
                                 (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
@@ -133,7 +133,7 @@ times, A, D, U, B = concentrations(init.A, init.C, init.T, t_prefinal,
 # ## Plot
 # Plot the results of the calculation.
 
-# In[13]:
+# In[9]:
 
 
 plt.plot(times, A, 'b.', label='A')
@@ -149,7 +149,7 @@ plt.show()
 # ## Compare
 # Compare to the experimental results below.
 
-# In[18]:
+# In[10]:
 
 
 plt.plot(exp.Time.values[:-1], exp.A.values[:-1], 'b.', label='A')
@@ -162,7 +162,7 @@ plt.title('Experiment results')
 plt.show()
 
 
-# In[22]:
+# In[11]:
 
 
 exp_possible_b = init.A.values[0] - (exp.A.values + exp.U.values) # mol/L of A unaccounted for (potential B)
@@ -184,7 +184,7 @@ plt.show()
 
 # ## Obtaining rates from experimental data
 
-# In[23]:
+# In[8]:
 
 
 # 3-point differentiation of experimental [A] and [U]
@@ -197,14 +197,17 @@ exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
 exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
 
 
-# In[24]:
+# In[19]:
 
 
 # Plot of dudt, dadt vs time
 plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
+plt.xlabel('Time (s)')
+plt.ylabel('rate (M/s)')
+plt.show()
 
 
-# In[25]:
+# In[10]:
 
 
 # Plot of du/dt against (missing_a)^2 (looks linear)
@@ -215,12 +218,22 @@ plt.ylabel('$r_U$ (M/s)')
 
 # The above plot implies that $\beta_3 = 2$.
 
-# In[26]:
+# In[36]:
 
 
 # Plot of -(da/dt) against the concentrations of A and B
-plt.plot(exp_a[1:-1], -1.*exp_ra, 'b.',
-        exp_missing_a[1:-1], -1.*exp_ra, 'm.')
+lnA_exp = np.log(exp_a[1:-1])
+ln_ra_exp = np.log(-1*exp_ra)
+alpha_fit, lnk1_fit, r_val, p_val, std_err = linregress(lnA_exp, ln_ra_exp)
+plt.plot(lnA_exp, ln_ra_exp, 'b.', label='-ra vs [A]')
+plt.plot(lnA_exp, lnk1_fit + alpha_fit * lnA_exp, 'c-', label='fit')
+#plt.plot(exp_missing_a[1:-1], -1.*exp_ra, 'm.', label='-ra vs [B]')
+plt.xlabel('ln(Concentration) ln(M)')
+plt.ylabel('-ra (M/s)')
+plt.legend()
+plt.title('In the limit of no B')
+plt.show()
+print('k1 = ', np.exp(lnk1_fit), '\nalpha = ', alpha_fit)
 
 
 # ## Optimization of $k_3$ based no-catalyst data
