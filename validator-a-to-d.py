@@ -475,17 +475,17 @@ def b_concentration(times, ca0, cc0, T, params):
 
 # ## Check for a second intermediate species
 
-# In[29]:
+# In[30]:
 
 
 # Generate model dataset that matches the times of the experimental dataset
 # and subtract the B concentration at every time step
 model_a_ts, model_d_ts, model_u_ts, model_b_ts = concentrations(exp.Time.values, init.A, init.C, init.T,
                                 (alpha1, alpha2, beta1, beta2, gamma, k1, k_1, k2, k3))
-missing_a_not_b = exp_possible_b - model_b_ts
-plt.plot(exp.Time.values, exp_possible_b, 'b.', label='missing A')
-plt.plot(exp.Time.values, model_b_ts, 'c.', label='B (model)')
-plt.plot(exp.Time.values, missing_a_not_b, 'r.', label='missing A - B')
+missing_a_not_b = model_b_ts - exp_possible_b
+plt.plot(exp.Time.values[:-1], exp_possible_b[:-1], 'b.', label='missing A')
+plt.plot(exp.Time.values[:-1], model_b_ts[:-1], 'c.', label='B (model)')
+plt.plot(exp.Time.values[:-1], missing_a_not_b[:-1], 'r.', label='B - missing A')
 plt.title('Missing A vs Time')
 plt.xlabel('Time (s)')
 plt.ylabel('Concentration (M)')
