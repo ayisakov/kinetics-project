@@ -33,25 +33,49 @@ def readinit(filename):
     return pd.read_csv(filename, sep="\t|[ ]{1,}", engine='python', skiprows=1, names=['A', 'D', 'U', 'C', 'T'], nrows=1, usecols=range(2, 7))
 
 
-# In[103]:
+# In[36]:
 
 
-filename = "data/exp4053.tsv"
+#filename = "data/exp4053.tsv"
+filename = "data/exp1387.tsv"
 init = readinit(filename)
 exp = readdata(filename)
 t_final = exp.Time.values[-1]
 t_prefinal = exp.Time.values[-2]
 
 
+# In[3]:
+
+
+# Use instead of the above cell to combine experimental files with complementary timesteps
+# for example, timestep of 5 seconds and 7 seconds
+filename1 = "data/exp1389.tsv"
+filename2 = "data/exp4081.tsv"
+# read the settings
+init = readinit(filename1)
+# load two dataframes
+exp1 = readdata(filename1)
+exp2 = readdata(filename2)
+# get the final time values
+t_final = exp2.Time.values[-1]
+t_prefinal = exp2.Time.values[-2]
+# combine the two dataframes into one
+exp = exp1.append(exp2, ignore_index=True)
+# remove duplicate 0 value
+exp = exp.drop(exp.index[[21]])
+# sort dataframe by time
+exp = exp.sort_values(by=['Time'])
+
+
 # ## Use the following cell to assemble multiple experiment files for experiments performed at the same conditions
 
-# In[104]:
+# In[4]:
 
 
 datadir = "data/"
 extension = ".tsv"
-#filenames = ["exp1387", "exp1389", "exp1396"]
-filenames = ["exp1428", "exp1990", "exp1991", "exp1992"]
+filenames = ["exp1387", "exp1389", "exp1396"]
+#filenames = ["exp1428", "exp1990", "exp1991", "exp1992"]
 filenames = [datadir + i + extension for i in filenames]
 init_concat = readinit(filenames[0]) # Make sure that initial conditions are the same for all files!
 dataframes = [readdata(file) for file in filenames]
@@ -85,7 +109,7 @@ t_final_concat = max(exp_times_concat)
 # 
 # ## Use the cell below to enter a rate law. Define all necessary constants
 
-# In[105]:
+# In[5]:
 
 
 def dadt(cA, cB, alpha, beta1, k1, k_1):
@@ -142,24 +166,24 @@ def concentrations(times, cA0, cC0, T, params):
 # ## Integrate
 # Use the cell below to carry out the integration
 
-# In[106]:
+# In[150]:
 
 
 alpha = 1.
 beta1 = 1.
-beta2 = 1
+beta2 = 2.
 beta3 = 2.
-gamma = 2.
-k1 = 0.12
+gamma = 1.
+k1 = 0.082
 k_1 = k1 / 0.308 # from equilibrium relationship
-k2 = 1.
-k3 = 0.50
+k2 = 12.
+k3 = 0.48
 times = np.linspace(0, t_prefinal, 1000)
 A, D, U, B = concentrations(times, init.A, init.C, init.T,
                                 (alpha, beta1, beta2, beta3, gamma, k1, k_1, k2, k3))
 
 
-# In[107]:
+# In[151]:
 
 
 times_concat = np.linspace(0, t_final_concat, 1000)
@@ -173,7 +197,7 @@ A_concat, D_concat, U_concat, B_concat = concentrations(times_concat,
 # ## Compare
 # Compare to the experimental results below.
 
-# In[108]:
+# In[152]:
 
 
 exp_possible_b = init.A.values[0] - (exp.A.values + exp.U.values + exp.D.values) # mol/L of A unaccounted for (potential B)
@@ -193,7 +217,7 @@ plt.ylabel('Concentration (M)')
 plt.show()
 
 
-# In[109]:
+# In[153]:
 
 
 exp_possible_b_concat = init_concat.A.values[0] - (a_concat + u_concat + d_concat) # mol/L of A unaccounted for (potential B)
@@ -206,7 +230,7 @@ plt.plot(exp_times_concat, a_concat, 'b^', label='A (exp)')
 plt.plot(exp_times_concat, d_concat, 'g^', label='D (exp)')
 plt.plot(exp_times_concat, u_concat, 'r^', label='U (exp)')
 plt.plot(exp_times_concat, exp_possible_b_concat, 'k^', label='B (exp)')
-plt.legend(loc=1)
+plt.legend()
 plt.title('Experiment versus calculations')
 plt.xlabel('Time (s)')
 plt.ylabel('Concentration (M)')
@@ -215,21 +239,26 @@ plt.show()
 
 # ## Obtaining rates from experimental data
 
-# In[110]:
+# In[19]:
 
 
 # 3-point differentiation of experimental [A], [U], and possible [B]
 exp_a = exp.A.values[:-1] # ignore the last long-time value
 exp_u = exp.U.values[:-1] # ignore the last long-time value
+exp_d = exp.D.values[:-1] # ignore the last long-time value
 exp_t = exp.Time.values[:-1] # ignore the last long-time value
 exp_missing_a = init.A.values[0] - (exp_a + exp_u) # mol/L of A unaccounted for (potential B)
-delta_t = exp_t[1] - exp_t[0]
-exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
-exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
-exp_r_missing_a = (np.diff(exp_missing_a[:-1]) + np.diff(exp_missing_a[1:])) / (2 * delta_t)
+#delta_t = exp_t[1] - exp_t[0]
+twice_delta_t = (np.diff(exp_t[:-1]) + np.diff(exp_t[1:])) # now an array
+#exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / (2 * delta_t)
+#exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / (2 * delta_t)
+exp_ra = (np.diff(exp_a[:-1]) + np.diff(exp_a[1:])) / twice_delta_t
+exp_ru = (np.diff(exp_u[:-1]) + np.diff(exp_u[1:])) / twice_delta_t
+exp_rd = (np.diff(exp_d[:-1]) + np.diff(exp_d[1:])) / twice_delta_t
+exp_r_missing_a = (np.diff(exp_missing_a[:-1]) + np.diff(exp_missing_a[1:])) / twice_delta_t
 
 
-# In[111]:
+# In[20]:
 
 
 # 3-point differentiation of concatenated experimental [A], [U], and possible [B]
@@ -239,17 +268,20 @@ exp_r_missing_a = (np.diff(exp_missing_a[:-1]) + np.diff(exp_missing_a[1:])) / (
 #exp_r_missing_a = (np.diff(exp_missing_a[:-1]) + np.diff(exp_missing_a[1:])) / (2 * delta_t)
 
 
-# In[112]:
+# In[22]:
 
 
-# Plot of dudt, dadt vs time
-plt.plot(exp_t[1:-1], exp_ru, 'm.', exp_t[1:-1], exp_ra, 'c.')
+# Plot of dudt, dddt, dadt vs time
+plt.plot(exp_t[1:-1], exp_ru, 'm.', label="du/dt")
+plt.plot(exp_t[1:-1], exp_ra, 'c.', label="da/dt")
+plt.plot(exp_t[1:-1], exp_rd, 'g.', label="dd/dt")
 plt.xlabel('Time (s)')
 plt.ylabel('rate (M/s)')
+plt.legend()
 plt.show()
 
 
-# In[113]:
+# In[23]:
 
 
 # Plot of du/dt against (missing_a)^2 (looks linear)
@@ -260,7 +292,7 @@ plt.ylabel('$r_U$ (M/s)')
 
 # The above plot implies that $\beta_3 = 2$.
 
-# In[114]:
+# In[24]:
 
 
 # Plot of -(da/dt) against the concentration of A in the limit of no B
@@ -280,7 +312,7 @@ print('k1 = ', np.exp(lnk1_fit), '\nalpha = ', alpha_fit)
 
 # ## Optimization of $k_3$ based no-catalyst data
 
-# In[115]:
+# In[25]:
 
 
 def report(optimal_parameters, covariance):
@@ -292,7 +324,7 @@ def report(optimal_parameters, covariance):
                                                             parameter_errors[i]))
 
 
-# In[116]:
+# In[26]:
 
 
 x_data = exp_missing_a[1:-1]
@@ -310,7 +342,7 @@ parameter_errors = np.sqrt(np.diag(pcov))
 report(popt, pcov)
 
 
-# In[117]:
+# In[27]:
 
 
 calc_ru_sparse = dudt(x_data, beta3_trial, popt[0])
@@ -328,7 +360,7 @@ plt.xlabel('Time (s)')
 plt.ylabel('Rate (M/s)')
 
 
-# In[118]:
+# In[28]:
 
 
 # Plot of ln(du/dt) vs ln([B]) for experimental and calculated data
@@ -346,7 +378,7 @@ plt.ylabel('ln(du/dt) (ln(M/s))')
 print('k3 = ', np.exp(lnk3_fit), '\nbeta3= ', beta3_fit)
 
 
-# In[119]:
+# In[29]:
 
 
 # rB vs time
@@ -358,7 +390,7 @@ plt.show()
 
 # ## Optimization of $k_{-1}$ based on no-catalyst data
 
-# In[120]:
+# In[30]:
 
 
 x_input = np.stack((exp_a[1:-1], exp_missing_a[1:-1]))
@@ -375,7 +407,7 @@ report(popt_ra, pcov_ra)
 
 # ## Global parameter optimization based on rate data
 
-# In[121]:
+# In[31]:
 
 
 def rate_a_partial(conc_data, k1_trial, k_1_trial):
@@ -386,7 +418,7 @@ def rate_a_partial(conc_data, k1_trial, k_1_trial):
     return rate_a
 
 
-# In[122]:
+# In[32]:
 
 
 def rate_b_partial(conc_data, k1_trial, k_1_trial, k3_trial):
@@ -400,7 +432,7 @@ def rate_b_partial(conc_data, k1_trial, k_1_trial, k3_trial):
     return rate_b
 
 
-# In[123]:
+# In[33]:
 
 
 x_bopt = np.stack((exp_a[1:-1], exp_missing_a[1:-1]))
@@ -413,7 +445,7 @@ report(popt_bopt, pcov_bopt)
 
 # ## Global parameter optimization based on concentration data
 
-# In[124]:
+# In[34]:
 
 
 # optimization based on U fit
@@ -437,7 +469,7 @@ error_u = np.sqrt(np.diag(pcov_u))
 report(popt_u, pcov_u)
 
 
-# In[125]:
+# In[35]:
 
 
 # optimization based on A fit
@@ -445,7 +477,7 @@ def a_concentration(times, ca0, cc0, T, params):
     return concentrations(times, ca0, cc0, T, params)[0]
 
 
-# In[126]:
+# In[36]:
 
 
 # optimization based on B fit
@@ -455,7 +487,7 @@ def b_concentration(times, ca0, cc0, T, params):
 
 # ## Check for a second intermediate species
 
-# In[127]:
+# In[37]:
 
 
 # Generate model dataset that matches the times of the experimental dataset
